@@ -6,7 +6,7 @@ all: single_cycle
 
 single_cycle: single_cycle.o
 	$(CXX) $(CXXFLAGS) single_cycle.o -o single_cycle
-single_cycle.o: main.cpp instruction.h
+single_cycle.o: main.cpp instruction.h variable.h
 	$(CXX) $(CXXFLAGS) -c main.cpp -o single_cycle.o
 
 clean:
