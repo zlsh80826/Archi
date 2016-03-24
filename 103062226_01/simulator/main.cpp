@@ -5,6 +5,7 @@
 #include "Variable.h"
 #include "InstructionMemory.h"
 #include "DataMemory.h"
+#include "Register.h"
 
 int main(){
 	Variable* variable = new Variable();
@@ -12,6 +13,7 @@ int main(){
 	DataMemory* data_memory = new DataMemory();
 	instruction_memory -> ReadIimage(variable);
 	data_memory -> ReadDimage(variable);
+	Register* registers = new Register(variable);
 	printf("%x\n", variable->PC);
 	printf("%x\n", variable->instruction_size);
 	printf("%x\n", variable->SP);
