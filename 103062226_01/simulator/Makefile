@@ -4,12 +4,13 @@ CXXFLAGS=-std=c++11
 
 all: single_cycle
 
-single_cycle: main.o InstructionMemory.o
-	$(CXX) $(CXXFLAGS) single_cycle.o -o single_cycle
-main.o: main.cpp InstructionMemory.h
+single_cycle: single_cycle.o InstructionMemory.o DataMemory.o
+	$(CXX) $(CXXFLAGS) single_cycle.o InstructionMemory.o DataMemory.o -o single_cycle
+single_cycle.o: main.cpp InstructionMemory.h
 	$(CXX) $(CXXFLAGS) -c main.cpp -o single_cycle.o
 InstructionMemory.o : InstructionMemory.cpp InstructionMemory.h
 	$(CXX) $(CXXFLAGS) -c InstructionMemory.cpp -o InstructionMemory.o
+DataMemory.o : DataMemory.cpp DataMemory.h
 
 clean:
 	rm -rf ./*.o

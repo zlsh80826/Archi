@@ -1,11 +1,10 @@
 #pragma once
 #include "Variable.h"
-#include "Instruction.h"
-const int max_index = 256;
+#include "Word.h"
 
 class InstructionMemory{
 public:
-	Instruction instruction_set[max_index];
+	Word instruction_set[max_index];
 
 	InstructionMemory();
 	~InstructionMemory();

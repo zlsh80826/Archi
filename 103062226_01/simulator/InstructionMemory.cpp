@@ -23,20 +23,19 @@ void InstructionMemory::ReadIimage(Variable* variable){
 
 	fread(&(variable->PC), sizeof(std::uint32_t), 1, file_ptr);
 	fread(&(variable->instruction_size), sizeof(std::uint32_t), 1, file_ptr);
-	variable->endian_translate();
+	variable -> iimage_endian_translate();
 
-	result = fread( (instruction_set + (variable->PC)/4), sizeof(Instruction), file_size, file_ptr);
+	result = fread( (instruction_set + (variable->PC)/4), sizeof(Word), file_size, file_ptr);
 	fclose(file_ptr);
 	this->Instruction_translate();
 }
 
 void InstructionMemory::Show(){
-	for(int i=0; i<256; ++i){
-		printf("%d %x\n", i,  instruction_set[i].opcode);
-	}
+	for(int i=0; i<256; ++i)
+		printf("%d %x\n", i, instruction_set[i].opcode);
 }
 
 void InstructionMemory::Instruction_translate(){
 	for(int i=0; i<max_index; ++i)
-		instruction_set[i].instruction_translate();
+		instruction_set[i].word_translate();
 }
