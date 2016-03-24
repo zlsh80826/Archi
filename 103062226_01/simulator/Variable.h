@@ -1,5 +1,7 @@
 #pragma once
 #include <endian.h>
+#include <cstdint>
+
 class Variable{
 public:
 	std::uint32_t PC;

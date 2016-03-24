@@ -2,10 +2,10 @@
 #include <cstdint>
 #include <cstring>
 
-class instruction{
+class Instruction{
 public:
 	uint32_t opcode;
-	instruction(){
+	Instruction(){
 		opcode = 0;
 	}
 
