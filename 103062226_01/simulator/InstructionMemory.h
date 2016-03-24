@@ -11,7 +11,7 @@ public:
 	~InstructionMemory();
 
 	void ReadIimage(Variable*);
-
+	void Instruction_translate();
 	void Show();
 };
 
