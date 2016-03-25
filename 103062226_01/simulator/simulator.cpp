@@ -1,11 +1,13 @@
 #include "simulator.h"
 #include <cstdio>
-
 simulator::simulator(Variable* v, Register* r, InstructionMemory* i, DataMemory* d){
 	this->variable = v;
 	this->registers = r;
 	this->instructionMemory = i;
 	this->dataMemory = d;
+	this->error = new Error();
+	isHalt = false;
+	cycle = 0;
 }
 
 simulator::~simulator(){
@@ -13,17 +15,17 @@ simulator::~simulator(){
 }
 
 void simulator::start(){
-	while( (variable->instruction_size) --){
+	while( !(this->isHalt) ){
+		registers->output_cycle(cycle++);
 		Word instruction = this -> InstructionFetch();
-		this -> InstructionDecode(instruction);
-		printf("%llu --------------------------\n", variable->instruction_size);
+		this->isHalt = this->InstructionDecode(instruction);
 	}
 }
 
 Word simulator::InstructionFetch(){
 	uint32_t program_count = variable->getPC();
 	variable->setPC(program_count + 4);
-	printf("%llu\n%x\n", program_count/4, instructionMemory->instruction_set[program_count/4].value);
+	//printf("%llu\n%x\n", program_count/4, instructionMemory->instruction_set[program_count/4].value);
 	return instructionMemory->instruction_set[program_count/4];
 }
 
@@ -36,26 +38,35 @@ bool simulator::InstructionDecode(Word instruction){
 		uint32_t rt_index = instruction.getRt();
 		Word* rt = &(registers->registerFile[rt_index]);
 		uint32_t rd_index = instruction.getRd();
+		if( rd_index == 0x00000000 && instruction.getFunct()!=0x00 ){
+			error->RError(cycle);
+			return true;
+		}
 		Word* rd = &(registers->registerFile[rd_index]);
 		uint32_t shamt = instruction.getShamt();
 		uint32_t funct = instruction.getFunct();
-		printf("R_type %x %x %x %x %x\n", rs, rt, rd, shamt, funct);
+		//printf("R_type %x %x %x %x %x\n", rs, rt, rd, shamt, funct);
 		ExcuteStage(opcode, rs, rt, rd, shamt, funct);
 		return true;
 	}else if(type == I_type){
 		uint32_t rs_index = instruction.getRs();
 		Word* rs = &(registers->registerFile[rs_index]);
 		uint32_t rt_index = instruction.getRt();
+		if( rt_index == 0x00000000 &&(opcode==0x08||opcode==0x09||opcode==0x23||opcode==0x21||opcode==0x25
+		||opcode==0x20||opcode==0x24||opcode==0x0f||opcode==0x0c||opcode==0x0d||opcode==0x0e||opcode==0x0a ) ){
+			error->RError(cycle);
+			return true;
+		}
 		Word* rt = &(registers->registerFile[rt_index]);
 		uint32_t immediate = instruction.getImmediate();
-		printf("I_type %x %x %x\n", rs, rt, immediate);
+		//printf("I_type %x %x %x\n", rs, rt, immediate);
 		return true;
 	}else if(type == J_type){
 		uint32_t address = instruction.getAddress();
-		printf("J_type %x\n", address);
+		//printf("J_type %x\n", address);
 		return true;
 	}else if(type == S_type){
-		printf("S_type\n");
+		//printf("S_type\n");
 		return false;
 	}else{
 		return false;

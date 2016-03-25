@@ -25,7 +25,7 @@ void DataMemory::ReadDimage(Variable* variable){
 	fread(&(variable->data_size), sizeof(std::uint32_t), 1, file_ptr);
 	variable -> dimage_endian_translate();
 
-	fread( DataMemory_set, sizeof(Word), file_size, file_ptr);
+	fread( DataMemory_set, sizeof(std::uint32_t), file_size, file_ptr);
 	fclose(file_ptr);
 	this->DataMemory_translate();
 }
@@ -33,6 +33,11 @@ void DataMemory::ReadDimage(Variable* variable){
 void DataMemory::Show(){
 	for(int i=0; i<256; ++i)
 		printf("%d %x\n", i, DataMemory_set[i].value);
+
+	printf("--------------------\n");
+
+	for(int i=0; i<1024; ++i)
+		printf("%d %x\n", i, byte[i]);
 }
 
 void DataMemory::DataMemory_translate(){

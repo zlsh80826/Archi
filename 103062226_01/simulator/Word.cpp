@@ -69,7 +69,6 @@ uint32_t Word::getRs(){
 
 uint32_t Word::getRt(){
 	uint32_t temp = (value >> 16);
-	printf("%x\n", temp);
 	return ( temp % (1<<5) );
 }
 

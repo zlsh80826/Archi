@@ -3,12 +3,16 @@
 #include "Register.h"
 #include "InstructionMemory.h"
 #include "DataMemory.h"
+#include "Error.h"
 
 class simulator{
 	Variable* variable;
 	Register* registers;
 	InstructionMemory* instructionMemory;
 	DataMemory* dataMemory;
+	Error* error;
+	bool isHalt;
+	int cycle;
 
 public:
 	simulator(Variable*, Register*, InstructionMemory*, DataMemory*);

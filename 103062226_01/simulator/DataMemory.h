@@ -4,7 +4,10 @@
 
 class DataMemory{
 public:
-	Word DataMemory_set[max_index];
+	union{
+		Word DataMemory_set[256];
+		uint8_t byte[1024];
+	};
 
 	DataMemory();
 	~DataMemory();
