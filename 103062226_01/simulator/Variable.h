@@ -1,7 +1,7 @@
 #pragma once
 #include <endian.h>
 #include <cstdint>
-const int max_index = 256;
+#define max_index 256
 
 class Variable{
 public:
@@ -25,5 +25,13 @@ public:
 	void dimage_endian_translate(){
 		SP = be32toh(SP);
 		data_size = be32toh(data_size);
+	}
+
+	uint32_t getPC(){
+		return PC;
+	}
+
+	void setPC(uint32_t newPC){
+		PC = newPC;
 	}
 };

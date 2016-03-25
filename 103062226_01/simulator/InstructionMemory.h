@@ -4,7 +4,7 @@
 
 class InstructionMemory{
 public:
-	Word instruction_set[max_index];
+	Word instruction_set[256];
 
 	InstructionMemory();
 	~InstructionMemory();

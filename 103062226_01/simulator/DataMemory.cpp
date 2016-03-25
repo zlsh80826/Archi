@@ -32,7 +32,7 @@ void DataMemory::ReadDimage(Variable* variable){
 
 void DataMemory::Show(){
 	for(int i=0; i<256; ++i)
-		printf("%d %x\n", i, DataMemory_set[i].opcode);
+		printf("%d %x\n", i, DataMemory_set[i].value);
 }
 
 void DataMemory::DataMemory_translate(){

@@ -1,6 +1,7 @@
 #include "InstructionMemory.h"
 #include <iostream>
 #include <cstdlib>
+#include <cstdint>
 
 InstructionMemory::InstructionMemory(){
 
@@ -32,7 +33,7 @@ void InstructionMemory::ReadIimage(Variable* variable){
 
 void InstructionMemory::Show(){
 	for(int i=0; i<256; ++i)
-		printf("%d %x\n", i, instruction_set[i].opcode);
+		printf("%d %x\n", i, instruction_set[i].value);
 }
 
 void InstructionMemory::Instruction_translate(){

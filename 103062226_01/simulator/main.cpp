@@ -6,6 +6,7 @@
 #include "InstructionMemory.h"
 #include "DataMemory.h"
 #include "Register.h"
+#include "simulator.h"
 
 int main(){
 	Variable* variable = new Variable();
@@ -14,10 +15,13 @@ int main(){
 	instruction_memory -> ReadIimage(variable);
 	data_memory -> ReadDimage(variable);
 	Register* registers = new Register(variable);
-	printf("%x\n", variable->PC);
-	printf("%x\n", variable->instruction_size);
-	printf("%x\n", variable->SP);
-	printf("%x\n", variable->data_size);
+	printf("%llu\n", variable->PC);
+	printf("%llu\n", variable->instruction_size);
+	printf("%llu\n", variable->SP);
+	printf("%llu\n", variable->data_size);
 	instruction_memory->Show();
 	data_memory->Show();
+
+	simulator* instance = new simulator(variable, registers, instruction_memory, data_memory);
+	instance->start();
 }

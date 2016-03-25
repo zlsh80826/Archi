@@ -4,10 +4,8 @@
 const int register_size = 32;
 
 class Register{
-private:
-	Word registers[register_size];
-	
 public:
+	Word registerFile[register_size];	
 	Register(Variable*);
 	~Register();  
  		
