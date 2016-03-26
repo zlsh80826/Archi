@@ -31,12 +31,12 @@ void DataMemory::ReadDimage(Variable* variable){
 }
 
 void DataMemory::Show(){
-	for(int i=0; i<256; ++i)
+	for(int i=0; i<8; ++i)
 		printf("%d %x\n", i, DataMemory_set[i].value);
 
 	printf("--------------------\n");
 
-	for(int i=0; i<1024; ++i)
+	for(int i=0; i<32; ++i)
 		printf("%d %x\n", i, byte[i]);
 }
 

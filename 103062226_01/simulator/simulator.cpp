@@ -40,14 +40,14 @@ bool simulator::InstructionDecode(Word instruction){
 		uint32_t rd_index = instruction.getRd();
 		if( rd_index == 0x00000000 && instruction.getFunct()!=0x00 ){
 			error->RError(cycle);
-			return true;
+			return false;
 		}
 		Word* rd = &(registers->registerFile[rd_index]);
 		uint32_t shamt = instruction.getShamt();
 		uint32_t funct = instruction.getFunct();
 		//printf("R_type %x %x %x %x %x\n", rs, rt, rd, shamt, funct);
 		ExcuteStage(opcode, rs, rt, rd, shamt, funct);
-		return true;
+		return false;
 	}else if(type == I_type){
 		uint32_t rs_index = instruction.getRs();
 		Word* rs = &(registers->registerFile[rs_index]);
@@ -55,19 +55,21 @@ bool simulator::InstructionDecode(Word instruction){
 		if( rt_index == 0x00000000 &&(opcode==0x08||opcode==0x09||opcode==0x23||opcode==0x21||opcode==0x25
 		||opcode==0x20||opcode==0x24||opcode==0x0f||opcode==0x0c||opcode==0x0d||opcode==0x0e||opcode==0x0a ) ){
 			error->RError(cycle);
-			return true;
+			return false;
 		}
 		Word* rt = &(registers->registerFile[rt_index]);
 		uint32_t immediate = instruction.getImmediate();
 		//printf("I_type %x %x %x\n", rs, rt, immediate);
-		return true;
+		ExcuteStage(opcode, rs, rt, immediate);
+		return false;
 	}else if(type == J_type){
 		uint32_t address = instruction.getAddress();
+		ExcuteStage(opcode, address);
 		//printf("J_type %x\n", address);
-		return true;
+		return false;
 	}else if(type == S_type){
 		//printf("S_type\n");
-		return false;
+		return true;
 	}else{
 		return false;
 	}
@@ -106,6 +108,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, Word* rd, uint3
 }
 
 void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immediate){
+	printf("%d %x %x %x %x\n", cycle, opcode,rs->value, rt->value, immediate);
 	if(opcode == 0x08){
 		(rt->value) = (rs->value) + immediate;
 	}else if(opcode == 0x09){
@@ -137,11 +140,12 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 		uint32_t temp;
 		if( ((rs->value) + immediate)%4 == 0 ){
 			temp = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 24;
-		}else if( ((rs->value) + immediate)%2 == 1 ){
+		}else if( ((rs->value) + immediate)%4 == 1 ){
 			temp = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 16) % (1<<8);
-		}else if( ((rs->value) + immediate)%2 == 2){
+		}else if( ((rs->value) + immediate)%4 == 2){
 			temp = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 8) % (1<<8);
-		}else if( ((rs->value) + immediate)%2 == 3){
+
+		}else if( ((rs->value) + immediate)%4 == 3){
 			temp = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) % (1<<8);
 		}else{
 			//error
@@ -153,11 +157,12 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 	}else if(opcode == 0x24){
 		if( ((rs->value) + immediate)%4 == 0 ){
 			(rt->value) = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 24;
-		}else if( ((rs->value) + immediate)%2 == 1 ){
+		}else if( ((rs->value) + immediate)%4 == 1 ){
 			(rt->value) = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 16) % (1<<8);
-		}else if( ((rs->value) + immediate)%2 == 2 ){
+		}else if( ((rs->value) + immediate)%4 == 2 ){
 			(rt->value) = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 8) % (1<<8);
-		}else if( ((rs->value) + immediate)%2 == 3 ){
+			printf("%x\n", (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value));
+		}else if( ((rs->value) + immediate)%4 == 3 ){
 			(rt->value) = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) % (1<<8);
 		}else{
 			//error
@@ -171,15 +176,26 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 		}
 	}else if(opcode == 0x29){
 		uint32_t offset = ((rs->value) + immediate);
+		uint32_t temp = (rt->value)&0x0000ffff;
 		if( offset%4 == 0 ){
-			dataMemory->DataMemory_set[ offset/4 ].value = (rt->value);
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[ offset/4 ].value)&(0x0000ffff)) + (temp<<16);
 		}else if( offset%2 == 0 ){
-
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[ offset/4 ].value)&(0xffff0000)) + temp;
 		}else{
 			//error
 		}		
 	}else if(opcode == 0x28){
-		//empty
+		uint32_t offset = ((rs->value) + immediate);
+		uint32_t temp = (rt->value)&0x000000ff;
+		if( offset%4 == 0 ){
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[offset/4].value)&(0x00ffffff)) + temp<<24;
+		}else if( offset%4 == 1){
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[offset/4].value)&(0xff00ffff)) + temp<<16;
+		}else if( offset%4 == 2){
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[offset/4].value)&(0xffff00ff)) + temp<<8;
+		}else if( offset%4 == 3){
+			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[offset/4].value)&(0xffffff00)) + temp;
+		}
 	}else if(opcode == 0x0f){
 		rt->value = immediate << 16;
 	}else if(opcode == 0x0c){
@@ -213,3 +229,6 @@ void simulator::ExcuteStage(uint32_t opcode, uint32_t address){
 	}
 }
 
+void simulator::check_overflow(uint32_t source1, uint32_t source2){
+	uint32_t sum = source1 + source2;
+}

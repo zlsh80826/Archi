@@ -23,4 +23,5 @@ public:
 	void ExcuteStage(uint32_t, Word*, Word*, Word*, uint32_t, uint32_t);
 	void ExcuteStage(uint32_t, Word*, Word*, uint32_t);
 	void ExcuteStage(uint32_t, uint32_t);
+	void check_overflow(uint32_t, uint32_t);
 };

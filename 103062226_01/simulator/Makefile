@@ -7,7 +7,7 @@ all: single_cycle
 single_cycle: single_cycle.o InstructionMemory.o DataMemory.o Register.o simulator.o Word.o Error.o
 	$(CXX) $(CXXFLAGS) single_cycle.o InstructionMemory.o DataMemory.o Register.o simulator.o Word.o Error.o -o single_cycle
 single_cycle.o: main.cpp InstructionMemory.h
-	
+	$(CXX) $(CXXFLAGS) -c main.cpp -o single_cycle.o 
 InstructionMemory.o : InstructionMemory.cpp InstructionMemory.h
 
 DataMemory.o : DataMemory.cpp DataMemory.h
