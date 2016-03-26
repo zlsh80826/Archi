@@ -8,6 +8,7 @@ simulator::simulator(Variable* v, Register* r, InstructionMemory* i, DataMemory*
 	this->error = new Error();
 	isHalt = false;
 	cycle = 0;
+	write0 = false;
 }
 
 simulator::~simulator(){
@@ -16,39 +17,45 @@ simulator::~simulator(){
 
 void simulator::start(){
 	while( !(this->isHalt) ){
+		write0 = false;
 		registers->output_cycle(cycle++);
 		Word instruction = this -> InstructionFetch();
-		this->isHalt = this->InstructionDecode(instruction);
+		this->InstructionDecode(instruction);
 	}
 }
 
 Word simulator::InstructionFetch(){
 	uint32_t program_count = variable->getPC();
 	variable->setPC(program_count + 4);
-	//printf("%llu\n%x\n", program_count/4, instructionMemory->instruction_set[program_count/4].value);
+	printf("%d %llu %x %d\n",cycle, program_count/4, instructionMemory->instruction_set[program_count/4].value, registers->registerFile[31].value);
 	return instructionMemory->instruction_set[program_count/4];
 }
 
 bool simulator::InstructionDecode(Word instruction){
+	//dataMemory->Show();
 	Type type = instruction.getType();
 	uint32_t opcode = instruction.getOpcode();
 	if(type == R_type){
+		uint32_t shamt = instruction.getShamt();
+		uint32_t funct = instruction.getFunct();
 		uint32_t rs_index = instruction.getRs();
 		Word* rs = &(registers->registerFile[rs_index]);
 		uint32_t rt_index = instruction.getRt();
 		Word* rt = &(registers->registerFile[rt_index]);
 		uint32_t rd_index = instruction.getRd();
-		if( rd_index == 0x00000000 ){
-			if( ( (instruction.getRt())==(0x00000000)) && (instruction.getRd()==(0x00000000)) && ( instruction.getShamt()==(0x00000000)) ){
+		if( rd_index == 0x00000000 && funct!=0x08){
+			if( ( (instruction.getRt())==(0x00000000)) && (instruction.getRd()==(0x00000000)) && ( instruction.getShamt()==(0x00000000) && (instruction.getFunct()==(0x00000000)) ) ){
 
 			}else{
 				error->RError(cycle);
+				if(funct == 0x20)
+					check_overflow(rs->value, rt->value, '+');
+				else if(funct==0x22)
+					check_overflow(rs->value, rt->value, '-');
 			}
 			return false;
 		}
 		Word* rd = &(registers->registerFile[rd_index]);
-		uint32_t shamt = instruction.getShamt();
-		uint32_t funct = instruction.getFunct();
 		//printf("R_type %x %x %x %x %x\n", rs, rt, rd, shamt, funct);
 		ExcuteStage(opcode, rs, rt, rd, shamt, funct);
 		return false;
@@ -56,13 +63,20 @@ bool simulator::InstructionDecode(Word instruction){
 		uint32_t rs_index = instruction.getRs();
 		Word* rs = &(registers->registerFile[rs_index]);
 		uint32_t rt_index = instruction.getRt();
+		Word* rt = &(registers->registerFile[rt_index]);
+		uint32_t immediate = instruction.getImmediate();
 		if( rt_index == 0x00000000 &&(opcode==0x08||opcode==0x09||opcode==0x23||opcode==0x21||opcode==0x25
 		||opcode==0x20||opcode==0x24||opcode==0x0f||opcode==0x0c||opcode==0x0d||opcode==0x0e||opcode==0x0a ) ){
 			error->RError(cycle);
-			return false;
+			if(opcode==0x08||opcode==0x23||opcode==0x21||opcode==0x25||opcode==0x20||opcode==0x24){
+				if(opcode==0x08){
+					check_overflow(rs->value, immediate, '+');
+					return false;
+				}
+			}else{
+				return false;
+			}
 		}
-		Word* rt = &(registers->registerFile[rt_index]);
-		uint32_t immediate = instruction.getImmediate();
 		//printf("I_type %x %x %x\n", rs, rt, immediate);
 		ExcuteStage(opcode, rs, rt, immediate);
 		return false;
@@ -73,6 +87,7 @@ bool simulator::InstructionDecode(Word instruction){
 		return false;
 	}else if(type == S_type){
 		//printf("S_type\n");
+		this->isHalt = true;
 		return true;
 	}else{
 		return false;
@@ -101,9 +116,9 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, Word* rd, uint3
 	}else if(funct == 0x2a){
 		rd->value = ( (int32_t)(rs->value) < (int32_t)(rt->value) );
 	}else if(funct == 0x00){
-		rd->value = ( (rs->value) << shamt );
+		rd->value = ( (rt->value) << shamt );
 	}else if(funct == 0x02){
-		rd->value = ( (rs->value) >> shamt );
+		rd->value = ( (rt->value) >> shamt );
 	}else if(funct == 0x03){
 		if( rt->isNegative() ){
 			rd->value = (rt->value) >> shamt + (0xffffffff<<(32-shamt));
@@ -116,18 +131,20 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, Word* rd, uint3
 }
 
 void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immediate){
-	printf("%d %x %x %x %x\n", cycle, opcode,rs->value, rt->value, immediate);
+	//printf("%d %x %x %x %x\n", cycle, opcode,rs->value, rt->value, immediate);
 	if(opcode == 0x08){
 		check_overflow(rs->value, immediate, '+');
 		(rt->value) = (rs->value) + immediate;
 	}else if(opcode == 0x09){
 		(rt->value) = (rs->value) + immediate;
 	}else if(opcode == 0x23){
+		printf("lw: %d\n", rs->value);
 		check_overflow(rs->value, immediate, '+');
 		if(check_Address(rs->value, immediate, 4))
 			return;
 		(rt->value) = dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value; 
 	}else if(opcode == 0x21){
+		printf("aaaaaaa%d %d\n", rs->value, immediate);
 		check_overflow(rs->value, immediate, '+');
 		if(check_Address(rs->value, immediate, 2))
 			return;
@@ -185,13 +202,14 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 			(rt->value) = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 16) % (1<<8);
 		}else if( ((rs->value) + immediate)%4 == 2 ){
 			(rt->value) = ((dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 8) % (1<<8);
-			printf("%x\n", (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value));
+			//printf("%x\n", (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value));
 		}else if( ((rs->value) + immediate)%4 == 3 ){
 			(rt->value) = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) % (1<<8);
 		}else{
 			//error
 		}
 	}else if(opcode == 0x2b){
+		printf("%d %d\n", rs->value, immediate);
 		check_overflow(rs->value, immediate, '+');
 		if(check_Address(rs->value, immediate, 4))
 			return;
@@ -232,50 +250,56 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 	}else if(opcode == 0x0f){
 		rt->value = immediate << 16;
 	}else if(opcode == 0x0c){
-		rt->value = ( (rs->value) & immediate ) & 0x0000ffff;
+		//rt->value = ( (rs->value) & immediate ) & 0x0000ffff;
+		rt->value = ( (rs->value) & (immediate&0x0000ffff) ) ;
 	}else if(opcode == 0x0d){
-		rt->value = ( (rs->value) | immediate ) & 0x0000ffff;
+		rt->value = ( (rs->value) | (immediate&0x0000ffff) );
 	}else if( opcode == 0x0e){
-		rt->value = (~( (rs->value) | immediate ) & 0x0000ffff);
+		rt->value = (~( (rs->value) | (immediate&0x0000ffff) ));
 	}else if(opcode == 0x0a){
-		rt->value = (uint32_t)(rs->value < (int32_t)immediate);
+		rt->value = (uint32_t)( (int32_t)(rs->value) < (int32_t)immediate);
 	}else if(opcode == 0x04){
-		check_overflow((variable->getPC()), (immediate>>2), '+');
+		check_overflow((variable->getPC()), (immediate<<2), '+');
 		if(rs->value == rt->value)
-			variable->setPC(variable->getPC() + (immediate>>2));
+			variable->setPC(variable->getPC() + (immediate<<2));
 	}else if(opcode == 0x05){
-		check_overflow((variable->getPC()), (immediate>>2), '+');
+		check_overflow((variable->getPC()), (immediate<<2), '+');
 		if(rs->value != rt->value)
-			variable->setPC(variable->getPC() + (immediate>>2));		
+			variable->setPC(variable->getPC() + (immediate<<2));		
 	}else if(opcode == 0x07){
 		if(rs->value > 0)
-			variable->setPC(variable->getPC() + (immediate>>2));				
+			variable->setPC(variable->getPC() + (immediate<<2));				
 	}else{
 		//empty
 	}
 }
 
 void simulator::ExcuteStage(uint32_t opcode, uint32_t address){
+	//printf("%d\n", (address<<2) | ((variable->getPC())>>28));
 	if(opcode == 0x02){
-		variable->setPC(address<<2 + variable->getPC()>>28);
+		variable->setPC( (address<<2) | ((variable->getPC())>>28) );
 	}else if(opcode == 0x03){
 		registers->registerFile[31].value = variable->getPC();
-		variable->setPC(address<<2 + variable->getPC()>>28);
+		variable->setPC( (address<<2) | ((variable->getPC())>>28) );
 	}
 }
 
 void simulator::check_overflow(uint32_t source1, uint32_t source2, char add_sub){
+	//printf("yoyocheckout\n");
 	if(add_sub == '+'){
 		uint32_t sum = source1 + source2;	
+		//printf("%x %x %x %x %x %x\n", sum, source1, source2, (sum&0x80000000), source1&0x80000000, source2&0x80000000);
 		if( (source1&0x80000000)==(source2&0x80000000) ){
 			if( (source1&0x80000000)!=(sum&0x80000000) ){
 				error->NumberOverflow(this->cycle);
 			}
 		}
 	}else{
-		uint32_t sum = source1 - source2;	
-		if( (source1&0x80000000)==(source2&0x80000000) ){
-			if( (source1&0x80000000)!=(sum&0x80000000) ){
+		source2 = 0x00000000 - source2;
+		uint32_t sum = source1 + source2;	
+		//printf("%x %x %x %x %x %x\n", sum, source1, source2, (sum&0x80000000), source1&0x80000000, source2&0x80000000);
+		if( ((source1)&(0x80000000))==((source2)&(0x80000000)) ){
+			if( ((source1)&(0x80000000))!=((sum)&(0x80000000)) ){
 				error->NumberOverflow(this->cycle);
 			}
 		}	
@@ -284,10 +308,15 @@ void simulator::check_overflow(uint32_t source1, uint32_t source2, char add_sub)
 
 bool simulator::check_Address(uint32_t reg, uint32_t immediate, uint32_t type){
 	uint32_t offset = reg + immediate;
-	if(offset + type > 1023){
-		error->MemoryAddressOverflow(cycle);
-		isHalt = true;
-		return true;
+	if(offset + type > 1024){
+		error->MemoryAddressOverflow(this->cycle);
+		this->isHalt = true;
 	}
+	if( (offset%type)!=0 ){
+		error->DataMisaligned(this->cycle);
+		this->isHalt = true;
+	}
+	if(isHalt)
+		return true;
 	return false;
 }

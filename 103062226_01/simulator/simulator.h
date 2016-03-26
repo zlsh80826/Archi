@@ -13,6 +13,7 @@ class simulator{
 	Error* error;
 	bool isHalt;
 	int cycle;
+	bool write0;
 
 public:
 	simulator(Variable*, Register*, InstructionMemory*, DataMemory*);

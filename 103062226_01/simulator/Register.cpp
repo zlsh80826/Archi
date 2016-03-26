@@ -12,9 +12,9 @@ Register::~Register(){
 void Register::output_cycle(int cycle){
 	FILE* file_ptr;
 	if(cycle == 0)
-		file_ptr = fopen("snapshot_temp.rpt", "wb");
+		file_ptr = fopen("snapshot.rpt", "wb");
 	else
-		file_ptr = fopen("snapshot_temp.rpt", "ab");
+		file_ptr = fopen("snapshot.rpt", "ab");
 	fseek(file_ptr, 0, SEEK_END);
 	fprintf(file_ptr, "cycle %d\n", cycle);
 	for(int i=0; i<32; ++i){
