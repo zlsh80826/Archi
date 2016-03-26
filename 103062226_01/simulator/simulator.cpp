@@ -68,6 +68,7 @@ bool simulator::InstructionDecode(Word instruction){
 		if( rt_index == 0x00000000 &&(opcode==0x08||opcode==0x09||opcode==0x23||opcode==0x21||opcode==0x25
 		||opcode==0x20||opcode==0x24||opcode==0x0f||opcode==0x0c||opcode==0x0d||opcode==0x0e||opcode==0x0a ) ){
 			error->RError(cycle);
+			write0 = true;
 			if(opcode==0x08||opcode==0x23||opcode==0x21||opcode==0x25||opcode==0x20||opcode==0x24){
 				if(opcode==0x08){
 					check_overflow(rs->value, immediate, '+');
@@ -120,8 +121,8 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, Word* rd, uint3
 	}else if(funct == 0x02){
 		rd->value = ( (rt->value) >> shamt );
 	}else if(funct == 0x03){
-		if( rt->isNegative() ){
-			rd->value = (rt->value) >> shamt + (0xffffffff<<(32-shamt));
+		if( (rt->value)&0x80000000 == 0x80000000 ){
+			rd->value = ((rt->value)>>shamt)|(0xffffffff<<(32-shamt));
 		}else{
 			rd->value = (rt->value) >> shamt;
 		}
@@ -138,15 +139,14 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 	}else if(opcode == 0x09){
 		(rt->value) = (rs->value) + immediate;
 	}else if(opcode == 0x23){
-		printf("lw: %d\n", rs->value);
 		check_overflow(rs->value, immediate, '+');
-		if(check_Address(rs->value, immediate, 4))
+		if(check_Address(rs->value, immediate, 4) || write0)
 			return;
 		(rt->value) = dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value; 
 	}else if(opcode == 0x21){
 		printf("aaaaaaa%d %d\n", rs->value, immediate);
 		check_overflow(rs->value, immediate, '+');
-		if(check_Address(rs->value, immediate, 2))
+		if(check_Address(rs->value, immediate, 2) || write0)
 			return;
 		uint32_t temp;
 		if( ((rs->value) + immediate)%4 == 0 ){
@@ -162,7 +162,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 			(rt->value) = temp;
 	}else if(opcode == 0x25){
 		check_overflow(rs->value, immediate, '+');
-		if(check_Address(rs->value, immediate, 2))
+		if(check_Address(rs->value, immediate, 2) || write0)
 			return;
 		if( ((rs->value) + immediate)%4 == 0 ){
 			(rt->value) = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 16;
@@ -173,7 +173,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 		}		
 	}else if(opcode == 0x20){
 		check_overflow(rs->value, immediate, '+');
-		if(check_Address(rs->value, immediate, 1))
+		if(check_Address(rs->value, immediate, 1) || write0)
 			return;
 		uint32_t temp;
 		if( ((rs->value) + immediate)%4 == 0 ){
@@ -194,7 +194,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 			(rt->value) = temp;	
 	}else if(opcode == 0x24){
 		check_overflow(rs->value, immediate, '+');
-		if(check_Address(rs->value, immediate, 1))
+		if(check_Address(rs->value, immediate, 1) || write0)
 			return;
 		if( ((rs->value) + immediate)%4 == 0 ){
 			(rt->value) = (dataMemory->DataMemory_set[ ((rs->value) + immediate)/4 ].value) >> 24;
@@ -248,6 +248,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 			dataMemory->DataMemory_set[offset/4].value = ((dataMemory->DataMemory_set[offset/4].value)&(0xffffff00)) + temp;
 		}
 	}else if(opcode == 0x0f){
+		printf("%x\n", immediate);
 		rt->value = immediate << 16;
 	}else if(opcode == 0x0c){
 		//rt->value = ( (rs->value) & immediate ) & 0x0000ffff;
@@ -267,7 +268,7 @@ void simulator::ExcuteStage(uint32_t opcode, Word* rs, Word* rt, uint32_t immedi
 		if(rs->value != rt->value)
 			variable->setPC(variable->getPC() + (immediate<<2));		
 	}else if(opcode == 0x07){
-		if(rs->value > 0)
+		if( (int32_t)(rs->value) > 0)
 			variable->setPC(variable->getPC() + (immediate<<2));				
 	}else{
 		//empty
@@ -308,7 +309,8 @@ void simulator::check_overflow(uint32_t source1, uint32_t source2, char add_sub)
 
 bool simulator::check_Address(uint32_t reg, uint32_t immediate, uint32_t type){
 	uint32_t offset = reg + immediate;
-	if(offset + type > 1024){
+	printf("%x %x %x %d %d %d", reg, immediate, type, reg, immediate, type);
+	if(offset + type > 1024 || (int32_t)(offset) < 0 ){
 		error->MemoryAddressOverflow(this->cycle);
 		this->isHalt = true;
 	}
